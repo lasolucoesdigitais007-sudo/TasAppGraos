@@ -1,0 +1,158 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email == "lasolucoesdigitais007@gmail.com";
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Default deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Products Schema & Access Security
+    match /products/{productId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(productId) && isValidProduct(incoming());
+      allow update: if isAdmin() && isValidProduct(incoming());
+      allow delete: if isAdmin();
+
+      function isValidProduct(data) {
+        return data.id is string && data.id.size() <= 100 &&
+               data.name is string && data.name.size() > 0 && data.name.size() <= 200 &&
+               data.category is string && data.category.size() <= 100 &&
+               data.pricePer100g is number && data.pricePer100g >= 0 &&
+               data.stock is number && data.stock >= 0 &&
+               (data.stockUnit == "kg" || data.stockUnit == "g" || data.stockUnit == "saca") &&
+               data.isActive is bool;
+      }
+    }
+
+    // Promotions Schema & Access Security
+    match /promotions/{promotionId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(promotionId) && isValidPromotion(incoming());
+      allow update: if isAdmin() && isValidPromotion(incoming());
+      allow delete: if isAdmin();
+
+      function isValidPromotion(data) {
+        return data.id is string && data.id.size() <= 100 &&
+               data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+               data.discountPercent is number && data.discountPercent >= 0 && data.discountPercent <= 100 &&
+               data.bannerUrl is string && data.bannerUrl.size() <= 2048 &&
+               data.selectedProductIds is list && data.selectedProductIds.size() <= 100 &&
+               data.expiryDate is string && data.expiryDate.size() <= 50 &&
+               data.isActive is bool;
+      }
+    }
+
+    // Banners Schema & Access Security
+    match /banners/{bannerId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(bannerId) && isValidBanner(incoming());
+      allow update: if isAdmin() && isValidBanner(incoming());
+      allow delete: if isAdmin();
+
+      function isValidBanner(data) {
+        return data.id is string && data.id.size() <= 100 &&
+               data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+               data.desc is string && data.desc.size() <= 500 &&
+               data.tag is string && data.tag.size() <= 100 &&
+               data.image is string && data.image.size() <= 2048 &&
+               data.isActive is bool;
+      }
+    }
+
+    // Categories Schema & Access Security
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(categoryId) && isValidCategory(incoming());
+      allow update: if isAdmin() && isValidCategory(incoming());
+      allow delete: if isAdmin();
+
+      function isValidCategory(data) {
+        return data.id is string && data.id.size() <= 100 &&
+               data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+               data.isActive is bool;
+      }
+    }
+
+    // Users Profiles
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidProfile(incoming(), true);
+      allow update: if isOwner(userId) && isValidProfile(incoming(), false);
+      allow delete: if isAdmin();
+
+      function isValidProfile(data, isCreate) {
+        return data.uid == userId &&
+               data.email is string &&
+               (isCreate ? (data.role == "cliente") : (data.role == existing().role || (existing().role == "admin" && data.role == "admin")));
+      }
+    }
+
+    // Orders Collection Rules
+    match /orders/{orderId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if true;
+      allow delete: if isAdmin();
+    }
+
+    // Recipes Rules
+    match /recipes/{recipeId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(recipeId) && isValidRecipe(incoming());
+      allow update: if isAdmin() && isValidRecipe(incoming());
+      allow delete: if isAdmin();
+
+      function isValidRecipe(data) {
+        return data.id is string && data.id.size() <= 100 &&
+               data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+               data.prepTime is string && data.prepTime.size() <= 100 &&
+               data.difficulty is string && data.difficulty.size() <= 100 &&
+               data.calories is string && data.calories.size() <= 100 &&
+               data.image is string && data.image.size() <= 2048;
+      }
+    }
+
+    // Articles Rules
+    match /articles/{articleId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(articleId) && isValidArticle(incoming());
+      allow update: if isAdmin() && isValidArticle(incoming());
+      allow delete: if isAdmin();
+
+      function isValidArticle(data) {
+        return data.id is string && data.id.size() <= 100 &&
+               data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+               data.subtitle is string && data.subtitle.size() <= 300 &&
+               data.category is string && data.category.size() <= 100 &&
+               data.summary is string && data.summary.size() <= 1000 &&
+               data.imageUrl is string && data.imageUrl.size() <= 2048;
+      }
+    }
+  }
+}

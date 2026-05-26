@@ -1,0 +1,175 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Premium bulk store product schema",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "pricePer100g": { "type": "number" },
+        "promoPrice": { "type": "number" },
+        "rating": { "type": "number" },
+        "reviews": { "type": "array" },
+        "imageUrl": { "type": "string" },
+        "origin": { "type": "string" },
+        "nutritionalInfo": { "type": "object" },
+        "isVegan": { "type": "boolean" },
+        "isFitness": { "type": "boolean" },
+        "isGlutenFree": { "type": "boolean" },
+        "stock": { "type": "number" },
+        "stockUnit": { "type": "string" },
+        "isFeatured": { "type": "boolean" },
+        "isHealthy": { "type": "boolean" },
+        "isBestSeller": { "type": "boolean" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["id", "name", "category", "pricePer100g", "stock", "stockUnit", "isActive"]
+    },
+    "Promotion": {
+      "title": "Promotion",
+      "description": "Special sales-campaign structured promotion schema",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "discountPercent": { "type": "number" },
+        "bannerUrl": { "type": "string" },
+        "selectedProductIds": { "type": "array" },
+        "expiryDate": { "type": "string" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["id", "title", "discountPercent", "bannerUrl", "selectedProductIds", "expiryDate", "isActive"]
+    },
+    "Banner": {
+      "title": "Banner",
+      "description": "Interactive rotative slider banners",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "desc": { "type": "string" },
+        "tag": { "type": "string" },
+        "image": { "type": "string" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["id", "title", "desc", "tag", "image", "isActive"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Product categories in the store",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["id", "name", "isActive"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with roles and metadata",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "cliente"] },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "rewardPoints": { "type": "number" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer orders logged for delivery and analytics",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "items": { "type": "array" },
+        "totalAmount": { "type": "number" },
+        "paymentMethod": { "type": "string" },
+        "status": { "type": "string" },
+        "trackerCode": { "type": "string" },
+        "address": { "type": "string" },
+        "userId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerEmail": { "type": "string" },
+        "customerPhone": { "type": "string" }
+      },
+      "required": ["id", "date", "items", "totalAmount", "paymentMethod", "status", "address"]
+    },
+    "Recipe": {
+      "title": "Recipe",
+      "description": "Chef curated natural recipe",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "prepTime": { "type": "string" },
+        "ingredients": { "type": "array" },
+        "instructions": { "type": "array" },
+        "difficulty": { "type": "string" },
+        "calories": { "type": "string" },
+        "image": { "type": "string" },
+        "isAiGenerated": { "type": "boolean" }
+      },
+      "required": ["id", "title", "prepTime", "ingredients", "instructions", "difficulty", "calories", "image"]
+    },
+    "EducationalArticle": {
+      "title": "EducationalArticle",
+      "description": "Healthy lifestyle educational article",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "category": { "type": "string" },
+        "summary": { "type": "string" },
+        "content": { "type": "array" },
+        "tips": { "type": "array" },
+        "tags": { "type": "array" },
+        "imageUrl": { "type": "string" }
+      },
+      "required": ["id", "title", "subtitle", "category", "summary", "content", "tips", "tags", "imageUrl"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Catalog of organic and healthy grains premium products"
+    },
+    "/promotions/{promotionId}": {
+      "schema": "Promotion",
+      "description": "Active promotional campaign definitions"
+    },
+    "/banners/{bannerId}": {
+      "schema": "Banner",
+      "description": "Rotating homepage banner configurations"
+    },
+    "/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Categories catalog"
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Registered client and admin profiles"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Customer purchases logged in the system"
+    },
+    "/recipes/{recipeId}": {
+      "schema": "Recipe",
+      "description": "Curated gourmet health recipes"
+    },
+    "/articles/{articleId}": {
+      "schema": "EducationalArticle",
+      "description": "Healthy lifestyle educational articles"
+    }
+  }
+}
