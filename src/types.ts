@@ -42,6 +42,12 @@ export interface Product {
   isVegan: boolean;
   isFitness: boolean;
   isGlutenFree: boolean;
+  isActive?: boolean;
+  stock?: number;
+  stockUnit?: string;
+  promoPrice?: number | null;
+  createdAt?: any;
+  updatedAt?: any;
 }
 
 export interface CartItem {

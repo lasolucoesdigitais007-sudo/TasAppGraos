@@ -59,7 +59,7 @@ import RecipesSection from './components/RecipesSection';
 import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut } from 'firebase/auth';
 import { auth, googleProvider, db } from './lib/firebase';
 import { handleFirestoreError, OperationType } from './lib/firestore-error-handler';
-import { collection, onSnapshot, doc, setDoc, addDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc, addDoc, updateDoc, deleteDoc, writeBatch, serverTimestamp } from 'firebase/firestore';
 
 // High-fidelity generated assets
 const HERO_IMAGE_PATH = '/tasgraos_hero_1779476648103.png';
@@ -2964,7 +2964,9 @@ export default function App() {
                                             isGlutenFree: !!newProd.isGlutenFree,
                                             stock: Number(newProd.stock !== undefined ? newProd.stock : 100),
                                             stockUnit: newProd.stockUnit || 'g',
-                                            isActive: true
+                                            isActive: true,
+                                            createdAt: serverTimestamp(),
+                                            updatedAt: serverTimestamp()
                                           };
 
                                           await setDoc(doc(db, 'products', createdId), payload);
@@ -3249,7 +3251,8 @@ export default function App() {
                                             pricePer100g: Number(editingProd.pricePer100g),
                                             promoPrice: editingProd.promoPrice ? Number(editingProd.promoPrice) : null,
                                             stock: Number(editingProd.stock !== undefined ? editingProd.stock : 100),
-                                            stockUnit: editingProd.stockUnit || 'g'
+                                            stockUnit: editingProd.stockUnit || 'g',
+                                            updatedAt: serverTimestamp()
                                           };
                                           await setDoc(doc(db, 'products', editingProd.id), payload);
                                           setEditingProd(null);
