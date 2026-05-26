@@ -4,6 +4,7 @@ import {
   Heart, 
   User, 
   Search, 
+  Package,
   ChevronRight, 
   ArrowLeft, 
   ArrowRight,
@@ -271,6 +272,7 @@ export default function App() {
   // Admin Form States
   const [newCatName, setNewCatName] = useState<string>('');
   const [editingProd, setEditingProd] = useState<any>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{message: string, onConfirm: () => void} | null>(null);
   const [newPromo, setNewPromo] = useState<any>({
     title: '',
     discountPercent: 10,
@@ -758,7 +760,9 @@ export default function App() {
                               alert('Seja muito bem-vindo, Gestor Tas Grãos! 🛠️🌱');
                               setCurrentView(ActiveView.HOME);
                             } catch (error: any) {
-                              console.error('Firebase Gestor Login Fail, executing local sandbox auth fallback:', error);
+                              if (error.code !== 'auth/operation-not-allowed') {
+                                console.error('Firebase Gestor Login Fail:', error);
+                              }
                               // Allow using a default/clear administrative local fallback password during sandbox or if user hasn't registered in firebase auth yet
                               if (loginPassword === 'tasgraos2026' || loginPassword === 'admin') {
                                 setUser({
@@ -772,7 +776,7 @@ export default function App() {
                                 alert('Acesso como Gestor concedido em Modo de Demonstração Local! 🌱⚙️');
                                 setCurrentView(ActiveView.HOME);
                               } else {
-                                alert('Erro de login ou senha de gestor incorreta! Se estiver no modo demonstrativo local, use a senha de desenvolvimento "tasgraos2026".');
+                                alert('Erro de login ou senha de gestor incorreta! Verifique as credenciais ou utilize a senha de desenvolvimento na versão de testes.');
                               }
                             } finally {
                               setIsGoogleLoading(false);
@@ -837,7 +841,9 @@ export default function App() {
                               alert('Acesso realizado com sucesso! 🌱');
                               setCurrentView(ActiveView.HOME);
                             } catch (error: any) {
-                              console.error('Firebase Auth Login Error, applying client-side local fallback:', error);
+                              if (error.code !== 'auth/operation-not-allowed') {
+                                console.error('Firebase Auth Login Error:', error);
+                              }
                               // Automatic and friendly guest fallback for test environments where user doesn't exist yet or provider is disabled
                               setUser({
                                 name: loginEmail.split('@')[0] || 'Cliente Tas',
@@ -936,7 +942,9 @@ export default function App() {
                               alert(`Cadastrado(a) com sucesso, ${registerName}! 🌱`);
                               setCurrentView(ActiveView.HOME);
                             } catch (error: any) {
-                              console.error('Firebase Auth Register Error, applying client-side local fallback:', error);
+                              if (error.code !== 'auth/operation-not-allowed') {
+                                console.error('Firebase Auth Register Error:', error);
+                              }
                               // Gracefully handle missing/unconfigured Email & Password provider in Firebase Console
                               setUser({
                                 name: registerName,
@@ -1072,7 +1080,7 @@ export default function App() {
                         </div>
                       ) : (
                         <h1 className="font-serif text-base text-tas-dark font-bold tracking-tight uppercase">
-                          {currentView === ActiveView.CATEGORIES && 'Catálogo Premium'}
+                          {currentView === ActiveView.CATEGORIES && 'Produtos Premium'}
                           {currentView === ActiveView.PRODUCT_DETAIL && 'Detalhes do Grão'}
                           {currentView === ActiveView.CART && 'Carrinho de Saúde'}
                           {currentView === ActiveView.CHECKOUT && 'Finalizando Pedido'}
@@ -1272,6 +1280,50 @@ export default function App() {
                                   >
                                     <Heart className={`h-3.5 w-3.5 ${isFav ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
                                   </button>
+                                  {user && (
+                                    <div className="absolute top-2 left-2 flex flex-col gap-1.5">
+                                      <button 
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          e.preventDefault();
+                                          setCurrentView(ActiveView.ADMIN);
+                                          setTimeout(() => {
+                                            const adminTabProd = document.getElementById('admin-tab-products');
+                                            if(adminTabProd) adminTabProd.click();
+                                            setTimeout(() => {
+                                              const editBtns = document.querySelectorAll(`[data-edit-prod="${p.id}"]`) as NodeListOf<HTMLButtonElement>;
+                                              if (editBtns.length > 0) editBtns[0].click();
+                                            }, 50);
+                                          }, 50);
+                                        }}
+                                        className="p-1.5 bg-white/95 rounded-full shadow-xs hover:bg-blue-50 text-blue-600 transition-colors cursor-pointer"
+                                        title="Editar Produto"
+                                      >
+                                        <Edit className="h-3.5 w-3.5" />
+                                      </button>
+                                      <button 
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          e.preventDefault();
+                                          setConfirmDialog({
+                                            message: `Excluir o produto "${p.name}" permanentemente do Firestore?`,
+                                            onConfirm: async () => {
+                                              try {
+                                                await deleteDoc(doc(db, 'products', p.id));
+                                                alert('Produto deletado com sucesso!');
+                                              } catch (err) {
+                                                handleFirestoreError(err, OperationType.DELETE, `delete-${p.id}`);
+                                              }
+                                            }
+                                          });
+                                        }}
+                                        className="p-1.5 bg-white/95 rounded-full shadow-xs hover:bg-red-50 text-red-600 transition-colors cursor-pointer"
+                                        title="Deletar Produto"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </button>
+                                    </div>
+                                  )}
                                   {p.isVegan && (
                                     <span className="absolute bottom-2 left-2 text-[8px] font-bold bg-emerald-600 text-white px-2 py-0.5 rounded-full uppercase tracking-wider">Vegan</span>
                                   )}
@@ -1375,6 +1427,25 @@ export default function App() {
                       {/* Dynamic Product counter */}
                       <div className="flex justify-between items-center text-xs text-tas-terroir pt-1 font-semibold">
                         <span>Exibindo {filteredProducts.length} produtos em "{selectedCategory}"</span>
+                        {user && (
+                          <button 
+                            onClick={() => {
+                              setCurrentView(ActiveView.ADMIN);
+                              setTimeout(() => {
+                                // Assuming setShowAdminTab('products'); setIsAddingItem(true); are managed inside ADMIN view or we simulate click
+                                const adminTabProd = document.getElementById('admin-tab-products');
+                                if(adminTabProd) adminTabProd.click();
+                                setTimeout(() => {
+                                  const addProdBtn = document.getElementById('btn-add-product');
+                                  if(addProdBtn) addProdBtn.click();
+                                }, 50);
+                              }, 50);
+                            }}
+                            className="bg-tas-gold text-white px-3 py-1 rounded-full flex items-center justify-center gap-1 shadow-xs hover:bg-tas-gold-dark cursor-pointer font-bold active:scale-95"
+                          >
+                            <Plus className="h-3 w-3" /> Cadastrar
+                          </button>
+                        )}
                       </div>
 
                       {/* Main Products Grid */}
@@ -1405,6 +1476,50 @@ export default function App() {
                                   >
                                     <Heart className={`h-3.5 w-3.5 ${isFav ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
                                   </button>
+                                  {user && (
+                                    <div className="absolute top-2 left-2 flex flex-col gap-1.5">
+                                      <button 
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          e.preventDefault();
+                                          setCurrentView(ActiveView.ADMIN);
+                                          setTimeout(() => {
+                                            const adminTabProd = document.getElementById('admin-tab-products');
+                                            if(adminTabProd) adminTabProd.click();
+                                            setTimeout(() => {
+                                              const editBtns = document.querySelectorAll(`[data-edit-prod="${p.id}"]`) as NodeListOf<HTMLButtonElement>;
+                                              if (editBtns.length > 0) editBtns[0].click();
+                                            }, 50);
+                                          }, 50);
+                                        }}
+                                        className="p-1.5 bg-white/95 rounded-full shadow-xs hover:bg-blue-50 text-blue-600 transition-colors cursor-pointer"
+                                        title="Editar Produto"
+                                      >
+                                        <Edit className="h-3.5 w-3.5" />
+                                      </button>
+                                      <button 
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          e.preventDefault();
+                                          setConfirmDialog({
+                                            message: `Excluir o produto "${p.name}" permanentemente do Firestore?`,
+                                            onConfirm: async () => {
+                                              try {
+                                                await deleteDoc(doc(db, 'products', p.id));
+                                                alert('Produto deletado com sucesso!');
+                                              } catch (err) {
+                                                handleFirestoreError(err, OperationType.DELETE, `delete-${p.id}`);
+                                              }
+                                            }
+                                          });
+                                        }}
+                                        className="p-1.5 bg-white/95 rounded-full shadow-xs hover:bg-red-50 text-red-600 transition-colors cursor-pointer"
+                                        title="Deletar Produto"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </button>
+                                    </div>
+                                  )}
                                   {p.isGlutenFree && (
                                     <span className="absolute bottom-2 left-2 text-[8px] font-bold bg-tas-olive text-white px-2 py-0.5 rounded-full uppercase tracking-wider">Glúten Free</span>
                                   )}
@@ -1596,7 +1711,7 @@ export default function App() {
                                 onClick={() => setCurrentView(ActiveView.CATEGORIES)}
                                 className="px-6 py-2.5 bg-tas-gold text-white text-xs font-bold rounded-xl hover:bg-tas-gold-dark cursor-pointer shadow-xs"
                               >
-                                Ir para o Catálogo
+                                Ir para Produtos
                               </button>
                             </div>
                           ) : (
@@ -1973,11 +2088,60 @@ export default function App() {
                                   referrerPolicy="no-referrer"
                                 />
                                 <button 
-                                  onClick={() => toggleFavorite(p.id)}
-                                  className="absolute top-2 right-2 p-1.5 bg-white/95 rounded-full shadow-xs active:scale-90 transition-transform"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    e.preventDefault();
+                                    toggleFavorite(p.id);
+                                  }}
+                                  className="absolute top-2 right-2 p-1.5 bg-white/95 rounded-full shadow-xs active:scale-90 transition-transform cursor-pointer"
+                                  title="Remover dos favoritos"
                                 >
                                   <Heart className="h-3.5 w-3.5 fill-red-500 text-red-500" />
                                 </button>
+                                {user && (
+                                  <div className="absolute top-2 left-2 flex flex-col gap-1.5">
+                                    <button 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        e.preventDefault();
+                                        setCurrentView(ActiveView.ADMIN);
+                                        setTimeout(() => {
+                                          const adminTabProd = document.getElementById('admin-tab-products');
+                                          if(adminTabProd) adminTabProd.click();
+                                          setTimeout(() => {
+                                            const editBtns = document.querySelectorAll(`[data-edit-prod="${p.id}"]`) as NodeListOf<HTMLButtonElement>;
+                                            if (editBtns.length > 0) editBtns[0].click();
+                                          }, 50);
+                                        }, 50);
+                                      }}
+                                      className="p-1.5 bg-white/95 rounded-full shadow-xs hover:bg-blue-50 text-blue-600 transition-colors cursor-pointer"
+                                      title="Editar Produto"
+                                    >
+                                      <Edit className="h-3.5 w-3.5" />
+                                    </button>
+                                    <button 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        e.preventDefault();
+                                        setConfirmDialog({
+                                          message: `Excluir o produto "${p.name}" permanentemente do Firestore?`,
+                                          onConfirm: async () => {
+                                            try {
+                                              await deleteDoc(doc(db, 'products', p.id));
+                                              alert('Produto deletado com sucesso!');
+                                            } catch (err) {
+                                              handleFirestoreError(err, OperationType.DELETE, `delete-${p.id}`);
+                                            }
+                                          }
+                                        });
+                                      }}
+                                      className="p-1.5 bg-white/95 rounded-full shadow-xs hover:bg-red-50 text-red-600 transition-colors cursor-pointer"
+                                      title="Deletar Produto"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
+                                )}
                               </div>
 
                               <div 
@@ -2649,6 +2813,7 @@ export default function App() {
                                           </div>
                                           <div className="flex items-center gap-1.5">
                                             <button 
+                                              data-edit-prod={p.id}
                                               onClick={() => {
                                                 setEditingProd({
                                                   ...p,
@@ -2663,14 +2828,18 @@ export default function App() {
                                               <Edit className="h-3.5 w-3.5" />
                                             </button>
                                             <button 
-                                              onClick={async () => {
-                                                if (!confirm(`Excluir o produto "${p.name}" permanentemente do Firestore?`)) return;
-                                                try {
-                                                  await deleteDoc(doc(db, 'products', p.id));
-                                                  alert('Produto removido de imediato do Firestore! 🗑️✅');
-                                                } catch (err) {
-                                                  handleFirestoreError(err, OperationType.DELETE, `prod-${p.id}`);
-                                                }
+                                              onClick={() => {
+                                                setConfirmDialog({
+                                                  message: `Excluir o produto "${p.name}" permanentemente do Firestore?`,
+                                                  onConfirm: async () => {
+                                                    try {
+                                                      await deleteDoc(doc(db, 'products', p.id));
+                                                      alert('Produto removido de imediato do Firestore! 🗑️✅');
+                                                    } catch (err) {
+                                                      handleFirestoreError(err, OperationType.DELETE, `prod-${p.id}`);
+                                                    }
+                                                  }
+                                                });
                                               }}
                                               className="p-2 text-red-500 hover:text-white bg-red-50 hover:bg-red-500 rounded-xl cursor-pointer transition-colors"
                                               title="Excluir Produto"
@@ -4302,8 +4471,8 @@ export default function App() {
                     onClick={() => { setSelectedProduct(null); setSelectedArticle(null); setCurrentView(ActiveView.CATEGORIES); }}
                     className={`flex flex-col items-center gap-1 py-1 transition-colors relative cursor-pointer ${currentView === ActiveView.CATEGORIES ? 'text-tas-gold font-bold' : 'text-tas-terroir-light/80 hover:text-tas-dark'}`}
                   >
-                    <Search className="h-5.5 w-5.5" />
-                    <span className="text-[9px] tracking-tight">Catálogo</span>
+                    <Package className="h-5.5 w-5.5" />
+                    <span className="text-[9px] tracking-tight">Produtos</span>
                     {currentView === ActiveView.CATEGORIES && <span className="absolute -bottom-1 h-1.5 w-1.5 bg-tas-gold rounded-full"></span>}
                   </button>
 
@@ -4350,6 +4519,25 @@ export default function App() {
             )}
 
           </AnimatePresence>
+
+          {/* GLOBAL DIALOGS */}
+          {confirmDialog && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadein">
+              <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl flex flex-col gap-4 relative animate-slideup">
+                <p className="text-sm font-bold text-tas-dark text-center leading-relaxed">
+                  {confirmDialog.message}
+                </p>
+                <div className="flex gap-3 mt-2">
+                  <button onClick={() => setConfirmDialog(null)} className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-tas-dark font-bold rounded-xl text-xs transition-colors cursor-pointer shadow-sm">
+                    Cancelar
+                  </button>
+                  <button onClick={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }} className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer shadow-sm">
+                    Confirmar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
         </div>
 

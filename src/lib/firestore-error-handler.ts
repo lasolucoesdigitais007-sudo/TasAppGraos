@@ -44,5 +44,6 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path
   };
   console.error('Firestore Error Detailed Info: ', JSON.stringify(errInfo));
+  alert(`Erro de banco de dados (${operationType}): ${errInfo.error}\n\nSe for erro de permissão (permission-denied), verifique as regras do Firebase Firestore.`);
   throw new Error(JSON.stringify(errInfo));
 }
